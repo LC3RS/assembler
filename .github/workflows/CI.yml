@@ -1,0 +1,43 @@
+name: "Continuous Integration"
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint_check:
+    name: Lint Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+      - name: Check using rustfmt
+        run: |
+          nix develop --command \
+          cargo fmt --check
+
+  test_and_build:
+    name: Test, Coverage and Build
+    needs: lint_check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+      - name: Run Tests with Coverage
+        run: |
+          nix develop --command \
+          cargo tarpaulin
+      - name: Build crate
+        run: nix build
