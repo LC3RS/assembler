@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 use num_derive::{FromPrimitive, ToPrimitive};
 
 use crate::{
@@ -196,5 +198,54 @@ impl Parseable for Token {
         };
 
         Ok(token)
+    }
+}
+
+impl Token {
+    /// Unwrap a Token::Const, return SyntaxError Otherwise
+    pub fn take_const(&self) -> Result<&u16> {
+        if let Token::Const(c) = self {
+            Ok(c)
+        } else {
+            Err(Error::new(ErrorKind::SyntaxError))
+        }
+    }
+
+    /// Unwrap a Token::Str, return SyntaxError Otherwise
+    pub fn take_str(&self) -> Result<&str> {
+        if let Token::Str(s) = self {
+            Ok(s)
+        } else {
+            Err(Error::new(ErrorKind::SyntaxError))
+        }
+    }
+
+    /// Unwrap a Token::Reg, return SyntaxError Otherwise
+    pub fn take_reg(&self) -> Result<&Register> {
+        if let Token::Reg(r) = self {
+            Ok(r)
+        } else {
+            Err(Error::new(ErrorKind::SyntaxError))
+        }
+    }
+}
+
+/// Forces the next element of the iter to be present
+/// Throws UnexpectedEof Otherwise
+pub trait MustNext<T> {
+    /// Returns reference to the next element of the iterator.
+    /// May return UnexpectedEof if next element does not exist
+    fn must_next(&mut self) -> Result<&T>;
+}
+
+/// Blanket implementation of MustNext over std::Slice::Iter
+/// This makes it easier to expect arguements in encoder functions
+impl<T> MustNext<T> for Iter<'_, T> {
+    fn must_next(&mut self) -> Result<&T> {
+        if let Some(item) = self.next() {
+            Ok(item)
+        } else {
+            Err(Error::new(ErrorKind::UnexpectedEof))
+        }
     }
 }

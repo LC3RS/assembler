@@ -8,6 +8,7 @@ pub enum ErrorKind {
     ParseRegisterError,
     ParseDirectiveError,
     InvalidTokenError,
+    UnexpectedEof,
     SyntaxError,
 }
 
@@ -35,6 +36,7 @@ impl ErrorKind {
             ErrorKind::ParseRegisterError => "parse register error",
             ErrorKind::ParseDirectiveError => "parse directive error",
             ErrorKind::InvalidTokenError => "encountered invalid token while parsing",
+            ErrorKind::UnexpectedEof => "unexpectedly reached EOF",
             ErrorKind::SyntaxError => "invalid syntax",
         }
     }
