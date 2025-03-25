@@ -165,6 +165,8 @@ impl Assembler {
 
                 Token::Dir(Directive::End) => break,
 
+                Token::Label(_) => continue,
+
                 // Orphan constants, registers or strings should be syntax error
                 Token::Str(_) | Token::Reg(_) | Token::Const(_) => {
                     return Err(Error::new(ErrorKind::SyntaxError))
