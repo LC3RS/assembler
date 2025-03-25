@@ -6,8 +6,9 @@ use std::{
 };
 
 use crate::{
-    enums::{Directive, Token},
-    error::Result,
+    encoder::{encode_blkw, encode_fill, encode_orig, encode_stringz},
+    enums::{Directive, MustNext, Token},
+    error::{Error, ErrorKind, Result},
     utils::tokenize,
 };
 
@@ -15,6 +16,8 @@ pub struct Assembler {
     file_path: PathBuf,
     lines: Option<Vec<String>>,
     sym_table: HashMap<String, u16>,
+    tokens: Vec<Token>,
+    bin: Vec<u16>,
     outfile: String,
 }
 
@@ -24,6 +27,8 @@ impl Assembler {
             file_path,
             outfile,
             lines: None,
+            tokens: Vec::new(),
+            bin: Vec::new(),
             sym_table: HashMap::new(),
         }
     }
@@ -32,6 +37,7 @@ impl Assembler {
         println!("Starting assembly process...");
         self.read_file()?;
         self.first_pass()?;
+        self.second_pass()?;
 
         Ok(())
     }
@@ -68,7 +74,8 @@ impl Assembler {
 
         if let Some(lines) = &self.lines {
             for line in lines {
-                if let Some(tokens) = tokenize(line)? {
+                if let Some(mut tokens) = tokenize(line)? {
+                    // TODO: debug mode
                     print!("[{:x}] ", lc);
                     for token in &tokens {
                         print!("{:?} ", token);
@@ -83,15 +90,21 @@ impl Assembler {
                         _ => 0,
                     };
 
+                    // Empty labels should be a syntax error
+                    // So throwing syntax error if the only token on a line is a label
+                    if idx >= tokens.len() {
+                        return Err(Error::new(ErrorKind::SyntaxError));
+                    }
+
                     match &tokens[idx] {
                         Token::Dir(Directive::Orig) => {
                             if let Token::Const(c) = tokens[idx + 1] {
-                                lc = c as u16;
+                                lc = c;
                             }
                         }
                         Token::Dir(Directive::Blkw) => {
                             if let Token::Const(c) = tokens[idx + 1] {
-                                lc += c as u16;
+                                lc += c;
                             }
                         }
                         Token::Dir(Directive::Stringz) => {
@@ -106,11 +119,65 @@ impl Assembler {
                             lc += 1;
                         }
                     }
+
+                    self.tokens.append(&mut tokens);
                 }
             }
         }
 
         self.emit_sym_table()?;
+
+        Ok(())
+    }
+
+    fn second_pass(&mut self) -> Result<()> {
+        let mut token_iter = self.tokens.iter();
+
+        // Tokens should begin with Dir(Orig) and Const(c)
+        // Otherwise syntax error
+        let mut bin = match token_iter.next() {
+            Some(Token::Dir(Directive::Orig)) => {
+                let origin = token_iter.must_next()?.take_const()?;
+                encode_orig(origin)
+            }
+            _ => return Err(Error::new(ErrorKind::SyntaxError)),
+        };
+        self.bin.append(&mut bin);
+
+        while let Some(token) = token_iter.next() {
+            let mut bin = match token {
+                /* Directive Encoders */
+                Token::Dir(Directive::Fill) => encode_fill(),
+
+                Token::Dir(Directive::Blkw) => {
+                    let c = token_iter.must_next()?.take_const()?;
+                    encode_blkw(c)
+                }
+
+                Token::Dir(Directive::Stringz) => {
+                    let s = token_iter.must_next()?.take_str()?;
+                    encode_stringz(s)
+                }
+
+                Token::Dir(Directive::Orig) => {
+                    return Err(Error::new(ErrorKind::SyntaxError));
+                }
+
+                Token::Dir(Directive::End) => break,
+
+                // Orphan constants, registers or strings should be syntax error
+                Token::Str(_) | Token::Reg(_) | Token::Const(_) => {
+                    return Err(Error::new(ErrorKind::SyntaxError))
+                }
+
+                _ => {
+                    println!("Not yet implemented!");
+                    Vec::new()
+                }
+            };
+
+            self.bin.append(&mut bin);
+        }
 
         Ok(())
     }

@@ -3,6 +3,7 @@ use cli::Cli;
 
 pub mod assembler;
 pub mod cli;
+pub mod encoder;
 pub mod enums;
 pub mod error;
 pub mod utils;
