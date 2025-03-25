@@ -2,13 +2,13 @@ use std::{fmt, io, num, result::Result as StdResult};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ErrorKind {
-    Test,
     IOError,
     ParseConstantError,
     ParseOpCodeError,
     ParseRegisterError,
     ParseDirectiveError,
     InvalidTokenError,
+    SyntaxError,
 }
 
 #[derive(Debug, Clone)]
@@ -19,19 +19,23 @@ pub struct Error {
 
 impl Error {
     pub fn new(kind: ErrorKind) -> Self {
-        let msg = match kind {
-            ErrorKind::Test => "Test error :D",
+        Self {
+            kind,
+            message: kind.as_str().to_owned(),
+        }
+    }
+}
+
+impl ErrorKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
             ErrorKind::IOError => "io error",
             ErrorKind::ParseConstantError => "parse constant error",
             ErrorKind::ParseOpCodeError => "parse op code error",
             ErrorKind::ParseRegisterError => "parse register error",
-            ErrorKind::ParseDirectiveError => "parse Directive error",
+            ErrorKind::ParseDirectiveError => "parse directive error",
             ErrorKind::InvalidTokenError => "encountered invalid token while parsing",
-        };
-
-        Self {
-            kind,
-            message: msg.to_owned(),
+            ErrorKind::SyntaxError => "invalid syntax",
         }
     }
 }
