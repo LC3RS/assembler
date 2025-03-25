@@ -44,13 +44,13 @@ pub fn tokenize(s: &str) -> Result<Option<Vec<Token>>> {
     }
 }
 
-pub fn parse_constant(s: &str) -> Result<i32> {
+pub fn parse_constant(s: &str) -> Result<u16> {
     let res = if let Some(s) = s.strip_prefix("x") {
         // Hex Constant
-        i32::from_str_radix(s, 16)
+        u16::from_str_radix(s, 16)
     } else if let Some(s) = s.strip_prefix("b") {
         // Binary Constant
-        i32::from_str_radix(s, 2)
+        u16::from_str_radix(s, 2)
     } else if let Some(s) = s.strip_prefix("#") {
         // Decimal Constant
         s.parse()

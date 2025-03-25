@@ -69,7 +69,7 @@ pub enum Token {
     Label(String),
     Op(OpCode),
     Dir(Directive),
-    Const(i32),
+    Const(u16),
     Reg(Register),
     Str(String),
     Invalid,
