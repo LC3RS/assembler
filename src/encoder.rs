@@ -39,3 +39,24 @@ pub fn encode_and(dr:&Register, sr1:&Register, sr2:u16) -> Vec<u16> {
     let com = (dr.to_u16().unwrap() << 9 ) | (sr1.to_u16().unwrap() << 6 ) | 0x5000 | sr2;
     vec![com]
 }
+
+pub fn encode_jmp(sr1:&Register) -> Vec<u16> {
+    let com = (sr1.to_u16().unwrap()<<6) | 0xc000;
+    vec![com]
+}
+
+pub fn encode_jsr(offset:u16) -> Vec<u16> {
+    let com = 0x4800 | offset;
+    vec![com]
+}
+
+pub fn encode_jsrr(sr1:&Register) -> Vec<u16> {
+    let com = 0x4000 | (sr1.to_u16().unwrap()<<6);
+    vec![com]
+}
+
+pub fn encode_ld(dr:&Register, offset:u16) -> Vec<u16> {
+    let com = (dr.to_u16().unwrap() << 9) | offset | 0x2000;
+    vec![com]
+}
+
