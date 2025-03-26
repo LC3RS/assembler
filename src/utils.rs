@@ -2,6 +2,7 @@ use crate::{
     enums::{Parseable, Token},
     error::Result,
 };
+use crate::error::{Error, ErrorKind};
 
 pub fn tokenize(s: &str) -> Result<Option<Vec<Token>>> {
     let s = s.trim();
@@ -60,4 +61,21 @@ pub fn parse_constant(s: &str) -> Result<u16> {
     }?;
 
     Ok(res)
+}
+
+
+pub fn sign_extend(mut x: u16, bit_count: u16) -> u16 {
+    if !(x>>bit_count)!=0 && x>>bit_count!=0 {
+        return 0
+    }
+
+    // Early return if bit_count is 0
+    if bit_count == 0 {
+        return x;
+    }
+
+    if ((x >> (bit_count - 1)) & 1) != 0 {
+        x |= (0xFFFF) << bit_count;
+    }
+    x
 }

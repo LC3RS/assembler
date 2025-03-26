@@ -8,8 +8,10 @@ pub enum ErrorKind {
     ParseRegisterError,
     ParseDirectiveError,
     InvalidTokenError,
+    MissingLabelError,
     UnexpectedEof,
     SyntaxError,
+    JibbyError
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +40,8 @@ impl ErrorKind {
             ErrorKind::InvalidTokenError => "encountered invalid token while parsing",
             ErrorKind::UnexpectedEof => "unexpectedly reached EOF",
             ErrorKind::SyntaxError => "invalid syntax",
+            ErrorKind::MissingLabelError => "missing label",
+            ErrorKind::JibbyError => "invalid value"
         }
     }
 }
@@ -58,7 +62,7 @@ impl From<io::Error> for Error {
 }
 
 impl From<num::ParseIntError> for Error {
-    fn from(error: std::num::ParseIntError) -> Self {
+    fn from(error: num::ParseIntError) -> Self {
         Self {
             kind: ErrorKind::ParseConstantError,
             message: error.to_string(),

@@ -20,13 +20,14 @@ pub enum Register {
     R7,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[repr(u16)]
+#[derive(ToPrimitive, Clone, Copy, Debug)]
 pub enum OpCode {
-    Br,    // 0b0000 branch
-    Brn,   // 0b0000 branch if n
+    Br=0b0000000,    // 0b0000 branch
+    Brp,   // 0b0000 branch if n
     Brz,   // 0b0000 branch if z
-    Brp,   // 0b0000 branch if p
-    Brzp,  // 0b0000 branch if zp
+    Brzp,   // 0b0000 branch if p
+    Brn,  // 0b0000 branch if zp
     Brnp,  // 0b0000 branch if np
     Brnz,  // 0b0000 barnch if nz
     Brnzp, // 0b0000 branch if nzp
@@ -80,7 +81,7 @@ pub enum Token {
 pub trait Parseable {
     fn parse(s: &str) -> Result<Self>
     where
-        Self: std::marker::Sized;
+        Self: Sized;
 }
 
 impl Parseable for OpCode {
@@ -224,6 +225,15 @@ impl Token {
     pub fn take_reg(&self) -> Result<&Register> {
         if let Token::Reg(r) = self {
             Ok(r)
+        } else {
+            Err(Error::new(ErrorKind::SyntaxError))
+        }
+    }
+
+    /// Unwrap a Token::Label, return SyntaxError Otherwise
+    pub fn take_label(&self) -> Result<&String> {
+        if let Token::Label(l) = self {
+            Ok(l)
         } else {
             Err(Error::new(ErrorKind::SyntaxError))
         }
