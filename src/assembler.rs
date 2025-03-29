@@ -25,10 +25,11 @@ pub struct Assembler {
     tokens: Vec<Token>,
     bin: Vec<u16>,
     outfile: String,
+    debug_mode: bool,
 }
 
 impl Assembler {
-    pub fn new(file_path: PathBuf, outfile: String) -> Self {
+    pub fn new(file_path: PathBuf, outfile: String, debug_mode: bool) -> Self {
         Self {
             file_path,
             outfile,
@@ -36,6 +37,7 @@ impl Assembler {
             tokens: Vec::new(),
             bin: Vec::new(),
             sym_table: HashMap::new(),
+            debug_mode,
         }
     }
 
@@ -48,6 +50,12 @@ impl Assembler {
         self.emit_obj_file()?;
 
         Ok(())
+    }
+
+    pub fn debug(&self, s: String) {
+        if self.debug_mode {
+            println!("[Debug] {s}");
+        }
     }
 
     fn read_file(&mut self) -> Result<()> {
@@ -99,12 +107,7 @@ impl Assembler {
         if let Some(lines) = &self.lines {
             for line in lines {
                 if let Some(mut tokens) = tokenize(line)? {
-                    // TODO: debug mode
-                    print!("[{:x}] ", lc);
-                    for token in &tokens {
-                        print!("{:?} ", token);
-                    }
-                    println!();
+                    self.debug(format!("[{:x}] {:x?}", lc, tokens));
 
                     let idx = match &tokens[0] {
                         Token::Label(label) => {

@@ -11,7 +11,7 @@ pub mod utils;
 fn main() {
     let args = Cli::parse();
 
-    let mut asm = assembler::Assembler::new(args.file, args.outfile);
+    let mut asm = assembler::Assembler::new(args.file, args.outfile, args.debug);
     if let Err(e) = asm.assemble() {
         println!("{e}");
     }
