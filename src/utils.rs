@@ -1,8 +1,9 @@
 use crate::{
     enums::{Parseable, Token},
-    error::Result,
+    error::{Error, ErrorKind, Result},
 };
 
+/// Parase a string into a vector of tokens
 pub fn tokenize(s: &str) -> Result<Option<Vec<Token>>> {
     let s = s.trim();
 
@@ -44,6 +45,7 @@ pub fn tokenize(s: &str) -> Result<Option<Vec<Token>>> {
     }
 }
 
+/// Parse constants based on prefix
 pub fn parse_constant(s: &str) -> Result<u16> {
     let res = if let Some(s) = s.strip_prefix("x") {
         // Hex Constant
@@ -62,6 +64,7 @@ pub fn parse_constant(s: &str) -> Result<u16> {
     Ok(res)
 }
 
+/// Extend low bit numbers to 16bit (u16)
 pub fn sign_extend(mut x: u16, bit_count: u16) -> u16 {
     if !(x >> bit_count) != 0 && x >> bit_count != 0 {
         return 0;
@@ -78,3 +81,13 @@ pub fn sign_extend(mut x: u16, bit_count: u16) -> u16 {
     x
 }
 
+/// Validate offset based on bit count
+pub fn verify_offset(mut offset: u16, bit_count: u16) -> Result<()> {
+    offset >>= bit_count;
+    let cmp = (!0u16) >> bit_count;
+    dbg!(cmp);
+    if offset != cmp && offset != 0 {
+        return Err(Error::new(ErrorKind::SyntaxError));
+    }
+    Ok(())
+}

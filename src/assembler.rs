@@ -2,7 +2,7 @@ use crate::encoder::{
     encode_add, encode_and, encode_br, encode_jmp, encode_jsr, encode_jsrr, encode_ld,
 };
 use crate::enums::OpCode;
-use crate::utils::sign_extend;
+use crate::utils::{sign_extend, verify_offset};
 use crate::{
     encoder::{encode_blkw, encode_fill, encode_orig, encode_stringz},
     enums::{Directive, MustNext, Token},
@@ -192,11 +192,9 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = *addr - lc;
+                    let offset = addr - lc;
                     lc += 1;
-                    if offset >> 9 != 0b1111111 && offset >> 9 != 0 {
-                        return Err(Error::new(ErrorKind::SyntaxError));
-                    }
+                    verify_offset(offset, 9)?;
                     encode_br(token, sign_extend(offset, 9))
                 }
 
@@ -236,11 +234,9 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = *addr - lc;
+                    let offset = addr - lc;
                     lc += 1;
-                    if offset >> 11 != 0b11111 && offset >> 11 != 0 {
-                        return Err(Error::new(ErrorKind::SyntaxError));
-                    }
+                    verify_offset(offset, 11)?;
                     encode_jsr(sign_extend(offset, 11))
                 }
 
@@ -257,11 +253,9 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = *addr - lc;
+                    let offset = addr - lc;
                     lc += 1;
-                    if offset >> 9 != 0b1111111 && offset >> 9 != 0 {
-                        return Err(Error::new(ErrorKind::SyntaxError));
-                    }
+                    verify_offset(offset, 9)?;
                     encode_ld(dr, sign_extend(offset, 9))
                 }
 
