@@ -233,7 +233,7 @@ impl Token {
     /// Unwrap a Token::Label, return SyntaxError Otherwise
     pub fn take_label(&self) -> Result<String> {
         if let Token::Label(l) = self {
-            Ok(l.clone())
+            Ok(l.to_owned())
         } else {
             Err(Error::new(ErrorKind::SyntaxError))
         }
