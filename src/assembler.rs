@@ -9,6 +9,7 @@ use crate::{
     error::{Error, ErrorKind, Result},
     utils::tokenize,
 };
+use byteorder::{BigEndian, WriteBytesExt};
 use num_traits::ToPrimitive;
 use std::{
     collections::HashMap,
@@ -42,7 +43,9 @@ impl Assembler {
         println!("Starting assembly process...");
         self.read_file()?;
         self.first_pass()?;
+        self.emit_sym_table()?;
         self.second_pass()?;
+        self.emit_obj_file()?;
 
         Ok(())
     }
@@ -70,6 +73,22 @@ impl Assembler {
 
         println!("Symbol Table");
         println!("{:#x?}", self.sym_table);
+
+        Ok(())
+    }
+
+    fn emit_obj_file(&self) -> Result<()> {
+        let mut bin_path = PathBuf::new();
+        if let Some(dirname) = self.file_path.parent() {
+            bin_path.push(dirname);
+        }
+        bin_path.push(format!("{}.obj", self.outfile));
+
+        let mut file = BufWriter::new(File::create(bin_path)?);
+        for &word in &self.bin {
+            file.write_u16::<BigEndian>(word)?;
+        }
+        file.flush()?;
 
         Ok(())
     }
@@ -129,8 +148,6 @@ impl Assembler {
                 }
             }
         }
-
-        self.emit_sym_table()?;
 
         Ok(())
     }
