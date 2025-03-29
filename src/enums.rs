@@ -23,31 +23,31 @@ pub enum Register {
 #[repr(u16)]
 #[derive(ToPrimitive, Clone, Copy, Debug)]
 pub enum OpCode {
-    Br=0b0000000,    // 0b0000 branch
-    Brp,   // 0b0000 branch if n
-    Brz,   // 0b0000 branch if z
-    Brzp,   // 0b0000 branch if p
-    Brn,  // 0b0000 branch if zp
-    Brnp,  // 0b0000 branch if np
-    Brnz,  // 0b0000 barnch if nz
-    Brnzp, // 0b0000 branch if nzp
-    Add,   // 0b0001 add
-    Ld,    // 0b0010 load
-    St,    // 0b0011 store
-    Jsr,   // 0b0100 jump register
-    Jsrr,  // 0b0100 jump register
-    And,   // 0b0101 bitwise and
-    Ldr,   // 0b0110 load register
-    Str,   // 0b0111 store register
-    Rti,   // 0b1000 unused
-    Not,   // 0b1001 bitwise not
-    Ldi,   // 0b1010 load indirect
-    Sti,   // 0b1011 store indirect
-    Ret,   // 0b1100 return
-    Jmp,   // 0b1100 jump
-    Res,   // 0b1101 reserved
-    Lea,   // 0b1110 load effective address
-    Trap,  // 0b1111 execute trap
+    Br = 0b0000000, // 0b0000 branch
+    Brp,            // 0b0000 branch if n
+    Brz,            // 0b0000 branch if z
+    Brzp,           // 0b0000 branch if p
+    Brn,            // 0b0000 branch if zp
+    Brnp,           // 0b0000 branch if np
+    Brnz,           // 0b0000 barnch if nz
+    Brnzp,          // 0b0000 branch if nzp
+    Add,            // 0b0001 add
+    Ld,             // 0b0010 load
+    St,             // 0b0011 store
+    Jsr,            // 0b0100 jump register
+    Jsrr,           // 0b0100 jump register
+    And,            // 0b0101 bitwise and
+    Ldr,            // 0b0110 load register
+    Str,            // 0b0111 store register
+    Rti,            // 0b1000 unused
+    Not,            // 0b1001 bitwise not
+    Ldi,            // 0b1010 load indirect
+    Sti,            // 0b1011 store indirect
+    Ret,            // 0b1100 return
+    Jmp,            // 0b1100 jump
+    Res,            // 0b1101 reserved
+    Lea,            // 0b1110 load effective address
+    Trap,           // 0b1111 execute trap
 
     /* Traps */
     GetC,  // 0x20
@@ -204,36 +204,36 @@ impl Parseable for Token {
 
 impl Token {
     /// Unwrap a Token::Const, return SyntaxError Otherwise
-    pub fn take_const(&self) -> Result<&u16> {
+    pub fn take_const(&self) -> Result<u16> {
         if let Token::Const(c) = self {
-            Ok(c)
+            Ok(*c)
         } else {
             Err(Error::new(ErrorKind::SyntaxError))
         }
     }
 
     /// Unwrap a Token::Str, return SyntaxError Otherwise
-    pub fn take_str(&self) -> Result<&str> {
+    pub fn take_str(&self) -> Result<String> {
         if let Token::Str(s) = self {
-            Ok(s)
+            Ok(s.to_owned())
         } else {
             Err(Error::new(ErrorKind::SyntaxError))
         }
     }
 
     /// Unwrap a Token::Reg, return SyntaxError Otherwise
-    pub fn take_reg(&self) -> Result<&Register> {
+    pub fn take_reg(&self) -> Result<Register> {
         if let Token::Reg(r) = self {
-            Ok(r)
+            Ok(r.to_owned())
         } else {
             Err(Error::new(ErrorKind::SyntaxError))
         }
     }
 
     /// Unwrap a Token::Label, return SyntaxError Otherwise
-    pub fn take_label(&self) -> Result<&String> {
+    pub fn take_label(&self) -> Result<String> {
         if let Token::Label(l) = self {
-            Ok(l)
+            Ok(l.clone())
         } else {
             Err(Error::new(ErrorKind::SyntaxError))
         }

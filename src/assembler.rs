@@ -1,19 +1,21 @@
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{BufRead, BufReader, BufWriter, Write},
-    path::PathBuf,
+use crate::encoder::{
+    encode_add, encode_and, encode_br, encode_jmp, encode_jsr, encode_jsrr, encode_ld,
 };
-use num_traits::ToPrimitive;
+use crate::enums::OpCode;
+use crate::utils::sign_extend;
 use crate::{
     encoder::{encode_blkw, encode_fill, encode_orig, encode_stringz},
     enums::{Directive, MustNext, Token},
     error::{Error, ErrorKind, Result},
     utils::tokenize,
 };
-use crate::encoder::{encode_add, encode_and, encode_br, encode_jmp, encode_jsr, encode_jsrr, encode_ld};
-use crate::enums::OpCode;
-use crate::utils::sign_extend;
+use num_traits::ToPrimitive;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufRead, BufReader, BufWriter, Write},
+    path::PathBuf,
+};
 
 pub struct Assembler {
     file_path: PathBuf,
@@ -135,15 +137,14 @@ impl Assembler {
 
     fn second_pass(&mut self) -> Result<()> {
         let mut token_iter = self.tokens.iter();
-
-        let mut lc = 0u16;
+        let mut lc;
 
         // Tokens should begin with Dir(Orig) and Const(c)
         // Otherwise syntax error
         let mut bin = match token_iter.next() {
             Some(Token::Dir(Directive::Orig)) => {
                 let origin = token_iter.must_next()?.take_const()?;
-                lc = *origin;
+                lc = origin;
                 encode_orig(origin)
             }
             _ => return Err(Error::new(ErrorKind::SyntaxError)),
@@ -156,7 +157,7 @@ impl Assembler {
                 Token::Dir(Directive::Fill) => {
                     lc += 1u16;
                     encode_fill()
-                },
+                }
 
                 Token::Dir(Directive::Blkw) => {
                     let c = token_iter.must_next()?.take_const()?;
@@ -176,53 +177,68 @@ impl Assembler {
 
                 Token::Dir(Directive::End) => break,
 
-                Token::Op(OpCode::Br | OpCode::Brn | OpCode::Brnp | OpCode::Brp | OpCode::Brz | OpCode::Brnz | OpCode::Brzp | OpCode::Brnzp) => {
+                Token::Op(
+                    OpCode::Br
+                    | OpCode::Brn
+                    | OpCode::Brnp
+                    | OpCode::Brp
+                    | OpCode::Brz
+                    | OpCode::Brnz
+                    | OpCode::Brzp
+                    | OpCode::Brnzp,
+                ) => {
                     let label = token_iter.must_next()?.take_label()?;
-                    let addr = self.sym_table.get(label).ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = *addr-lc;
-                    lc+=1;
-                    if offset>>9 != 0b1111111 && offset>>9 != 0 {
+                    let addr = self
+                        .sym_table
+                        .get(&label)
+                        .ok_or(Error::new(ErrorKind::MissingLabelError))?;
+                    let offset = *addr - lc;
+                    lc += 1;
+                    if offset >> 9 != 0b1111111 && offset >> 9 != 0 {
                         return Err(Error::new(ErrorKind::SyntaxError));
                     }
-                    encode_br(token,sign_extend(offset,9))
+                    encode_br(token, sign_extend(offset, 9))
                 }
 
                 Token::Op(OpCode::Add) => {
                     let dr = token_iter.must_next()?.take_reg()?;
                     let sr1 = token_iter.must_next()?.take_reg()?;
-                    let sr2 =  match token_iter.must_next()? {
-                        Token::Reg(r) =>  r.to_u16().unwrap(),
-                        Token::Const(c) => sign_extend(*c,5)|0b100000,
+                    let sr2 = match token_iter.must_next()? {
+                        Token::Reg(r) => r.to_u16().unwrap(),
+                        Token::Const(c) => sign_extend(*c, 5) | 0b100000,
                         _ => return Err(Error::new(ErrorKind::SyntaxError)),
                     };
-                    lc+=1;
+                    lc += 1;
                     encode_add(dr, sr1, sr2)
                 }
 
                 Token::Op(OpCode::And) => {
                     let dr = token_iter.must_next()?.take_reg()?;
                     let sr1 = token_iter.must_next()?.take_reg()?;
-                    let sr2 =  match token_iter.must_next()? {
-                        Token::Reg(r) =>  r.to_u16().unwrap(),
-                        Token::Const(c) => sign_extend(*c,5)|0b100000,
+                    let sr2 = match token_iter.must_next()? {
+                        Token::Reg(r) => r.to_u16().unwrap(),
+                        Token::Const(c) => sign_extend(*c, 5) | 0b100000,
                         _ => return Err(Error::new(ErrorKind::SyntaxError)),
                     };
-                    lc+=1;
+                    lc += 1;
                     encode_and(dr, sr1, sr2)
                 }
 
                 Token::Op(OpCode::Jmp) => {
                     let sr1 = token_iter.must_next()?.take_reg()?;
-                    lc+=1;
+                    lc += 1;
                     encode_jmp(sr1)
                 }
 
                 Token::Op(OpCode::Jsr) => {
                     let label = token_iter.must_next()?.take_label()?;
-                    let addr = self.sym_table.get(label).ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = *addr-lc;
-                    lc+=1;
-                    if offset>>11 != 0b11111 && offset>>11 != 0 {
+                    let addr = self
+                        .sym_table
+                        .get(&label)
+                        .ok_or(Error::new(ErrorKind::MissingLabelError))?;
+                    let offset = *addr - lc;
+                    lc += 1;
+                    if offset >> 11 != 0b11111 && offset >> 11 != 0 {
                         return Err(Error::new(ErrorKind::SyntaxError));
                     }
                     encode_jsr(sign_extend(offset, 11))
@@ -237,16 +253,17 @@ impl Assembler {
                 Token::Op(OpCode::Ld) => {
                     let dr = token_iter.must_next()?.take_reg()?;
                     let label = token_iter.must_next()?.take_label()?;
-                    let addr = self.sym_table.get(label).ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = *addr-lc;
-                    lc+=1;
-                    if offset>>9 != 0b1111111 && offset>>9 != 0 {
+                    let addr = self
+                        .sym_table
+                        .get(&label)
+                        .ok_or(Error::new(ErrorKind::MissingLabelError))?;
+                    let offset = *addr - lc;
+                    lc += 1;
+                    if offset >> 9 != 0b1111111 && offset >> 9 != 0 {
                         return Err(Error::new(ErrorKind::SyntaxError));
                     }
-                    encode_ld(dr,sign_extend(offset, 9))
+                    encode_ld(dr, sign_extend(offset, 9))
                 }
-
-
 
                 Token::Label(_) => continue,
 
