@@ -11,7 +11,7 @@ pub enum ErrorKind {
     MissingLabelError,
     UnexpectedEof,
     SyntaxError,
-    JibbyError
+    JibbyError,
 }
 
 #[derive(Debug, Clone)]
@@ -41,7 +41,7 @@ impl ErrorKind {
             ErrorKind::UnexpectedEof => "unexpectedly reached EOF",
             ErrorKind::SyntaxError => "invalid syntax",
             ErrorKind::MissingLabelError => "missing label",
-            ErrorKind::JibbyError => "invalid value"
+            ErrorKind::JibbyError => "invalid value",
         }
     }
 }
