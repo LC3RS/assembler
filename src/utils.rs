@@ -64,7 +64,6 @@ pub fn parse_constant(s: &str) -> Result<u16> {
     Ok(res as u16)
 }
 
-
 /// Validate offset based on bit count
 pub fn verify_offset(mut offset: u16, bit_count: u16) -> Result<u16> {
     let result = offset;
