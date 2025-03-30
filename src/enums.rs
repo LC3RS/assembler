@@ -183,13 +183,12 @@ impl Parseable for Token {
                     Self::Const(parse_constant(s)?)
                 } else if s.starts_with('"') && s.ends_with('"') {
                     // String
-                    // TODO: Escape characters
                     Self::Str(
-                        s.strip_suffix('"')
-                            .unwrap()
-                            .strip_prefix('"')
-                            .unwrap()
-                            .to_owned(),
+                        s.to_owned()
+                            .replace("\"", "")
+                            .replace("\\t", "\t")
+                            .replace("\\n", "\n")
+                            .replace("\\e", "\x1b"),
                     )
                 } else {
                     // Label

@@ -49,10 +49,10 @@ pub fn tokenize(s: &str) -> Result<Option<Vec<Token>>> {
 pub fn parse_constant(s: &str) -> Result<u16> {
     let res = if let Some(s) = s.strip_prefix("x") {
         // Hex Constant
-        u16::from_str_radix(s, 16)
+        i32::from_str_radix(s, 16)
     } else if let Some(s) = s.strip_prefix("b") {
         // Binary Constant
-        u16::from_str_radix(s, 2)
+        i32::from_str_radix(s, 2)
     } else if let Some(s) = s.strip_prefix("#") {
         // Decimal Constant
         s.parse()
@@ -61,35 +61,18 @@ pub fn parse_constant(s: &str) -> Result<u16> {
         s.parse()
     }?;
 
-    Ok(res)
+    Ok(res as u16)
 }
 
-/// Extend low bit numbers to 16bit (u16)
-pub fn sign_extend(mut x: u16, bit_count: u16) -> u16 {
-    if !(x >> bit_count) != 0 && x >> bit_count != 0 {
-        return 0;
-    }
-
-    // Early return if bit_count is 0
-    if bit_count == 0 {
-        return x;
-    }
-
-    if ((x >> (bit_count - 1)) & 1) != 0 {
-        x |= (0xFFFF) << bit_count;
-    }
-    x
-}
 
 /// Validate offset based on bit count
 pub fn verify_offset(mut offset: u16, bit_count: u16) -> Result<u16> {
     let result = offset;
     offset >>= bit_count;
-    let cmp = (!0u16) >> bit_count;
-    dbg!(cmp);
+    let cmp = 0xffff >> bit_count;
     if offset != cmp && offset != 0 {
         return Err(Error::new(ErrorKind::ValueError));
     }
 
-    Ok(result & (0xffff >> bit_count))
+    Ok(result & (0xffff >> (16 - bit_count)))
 }

@@ -1,9 +1,8 @@
 use crate::enums::{Register, Token};
-use crate::utils::sign_extend;
 use num_traits::ToPrimitive;
 
-pub fn encode_fill() -> Vec<u16> {
-    vec![0x00]
+pub fn encode_fill(v: u16) -> Vec<u16> {
+    vec![v]
 }
 
 pub fn encode_blkw(c: u16) -> Vec<u16> {
@@ -26,7 +25,7 @@ pub fn encode_br(t: &Token, offset: u16) -> Vec<u16> {
         let fin_op = op.to_u16().unwrap();
         com |= fin_op << 9;
     }
-    com |= sign_extend(offset, 9);
+    com |= offset;
     vec![com]
 }
 

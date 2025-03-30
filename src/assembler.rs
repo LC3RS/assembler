@@ -5,7 +5,7 @@ use crate::encoder::{
     encode_st, encode_sti, encode_str,
 };
 use crate::enums::OpCode;
-use crate::utils::{sign_extend, verify_offset};
+use crate::utils::verify_offset;
 use crate::{
     encoder::{encode_blkw, encode_fill, encode_orig, encode_stringz},
     enums::{Directive, MustNext, Token},
@@ -45,7 +45,7 @@ impl Assembler {
     }
 
     pub fn assemble(&mut self) -> Result<()> {
-        println!("Starting assembly process...");
+        self.debug("Starting assembly process".to_string());
         self.read_file()?;
         self.first_pass()?;
         self.emit_sym_table()?;
@@ -82,8 +82,8 @@ impl Assembler {
         }
         file.flush()?;
 
-        println!("Symbol Table");
-        println!("{:#x?}", self.sym_table);
+        self.debug("Symbol Table".to_owned());
+        self.debug(format!("{:#x?}", self.sym_table));
 
         Ok(())
     }
@@ -120,33 +120,29 @@ impl Assembler {
                         _ => 0,
                     };
 
-                    // Empty labels should be a syntax error
-                    // So throwing syntax error if the only token on a line is a label
-                    if idx >= tokens.len() {
-                        return Err(Error::new(ErrorKind::SyntaxError));
-                    }
-
-                    match &tokens[idx] {
-                        Token::Dir(Directive::Orig) => {
-                            if let Token::Const(c) = tokens[idx + 1] {
-                                lc = c;
+                    if idx < tokens.len() {
+                        match &tokens[idx] {
+                            Token::Dir(Directive::Orig) => {
+                                if let Token::Const(c) = tokens[idx + 1] {
+                                    lc = c;
+                                }
                             }
-                        }
-                        Token::Dir(Directive::Blkw) => {
-                            if let Token::Const(c) = tokens[idx + 1] {
-                                lc += c;
+                            Token::Dir(Directive::Blkw) => {
+                                if let Token::Const(c) = tokens[idx + 1] {
+                                    lc += c;
+                                }
                             }
-                        }
-                        Token::Dir(Directive::Stringz) => {
-                            if let Token::Str(s) = &tokens[idx + 1] {
-                                lc += s.len() as u16 + 1; // +1 for the extra null-byte at the end
+                            Token::Dir(Directive::Stringz) => {
+                                if let Token::Str(s) = &tokens[idx + 1] {
+                                    lc += s.len() as u16 + 1; // +1 for the extra null-byte at the end
+                                }
                             }
-                        }
 
-                        Token::Dir(Directive::End) => break,
+                            Token::Dir(Directive::End) => break,
 
-                        _ => {
-                            lc += 1;
+                            _ => {
+                                lc += 1;
+                            }
                         }
                     }
 
@@ -178,8 +174,20 @@ impl Assembler {
             let mut bin = match token {
                 /* Directive Encoders */
                 Token::Dir(Directive::Fill) => {
-                    lc += 1u16;
-                    encode_fill()
+                    let arg = token_iter.must_next()?;
+                    let v = match arg {
+                        Token::Const(_) => arg.take_const()?,
+                        Token::Label(l) => {
+                            let x = self
+                                .sym_table
+                                .get(l)
+                                .ok_or(Error::new(ErrorKind::MissingLabelError));
+                            x?.to_owned()
+                        }
+                        _ => return Err(Error::new(ErrorKind::SyntaxError)),
+                    };
+                    lc += 1;
+                    encode_fill(v)
                 }
 
                 Token::Dir(Directive::Blkw) => {
@@ -210,15 +218,20 @@ impl Assembler {
                     | OpCode::Brzp
                     | OpCode::Brnzp,
                 ) => {
-                    let label = token_iter.must_next()?.take_label()?;
-                    let addr = self
-                        .sym_table
-                        .get(&label)
-                        .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = addr - lc;
+                    let arg = token_iter.must_next()?;
                     lc += 1;
-                    verify_offset(offset, 9)?;
-                    encode_br(token, sign_extend(offset, 9))
+                    let offset = match arg {
+                        Token::Const(_) => arg.take_const()?,
+                        Token::Label(l) => {
+                            let addr = self
+                                .sym_table
+                                .get(l)
+                                .ok_or(Error::new(ErrorKind::MissingLabelError));
+                            addr?.wrapping_sub(lc)
+                        }
+                        _ => return Err(Error::new(ErrorKind::SyntaxError)),
+                    };
+                    encode_br(token, verify_offset(offset, 9)?)
                 }
 
                 Token::Op(OpCode::Add) => {
@@ -263,8 +276,8 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = addr - lc;
                     lc += 1;
+                    let offset = addr.wrapping_sub(lc);
                     encode_jsr(verify_offset(offset, 11)?)
                 }
 
@@ -281,8 +294,8 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = addr - lc;
                     lc += 1;
+                    let offset = addr.wrapping_sub(lc);
                     encode_ld(dr, verify_offset(offset, 9)?)
                 }
 
@@ -293,8 +306,8 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = addr - lc;
                     lc += 1;
+                    let offset = addr.wrapping_sub(lc);
                     encode_ldi(dr, verify_offset(offset, 9)?)
                 }
 
@@ -313,8 +326,9 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = addr - lc;
+
                     lc += 1;
+                    let offset = addr.wrapping_sub(lc);
                     encode_lea(dr, verify_offset(offset, 9)?)
                 }
 
@@ -342,8 +356,8 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = addr - lc;
                     lc += 1;
+                    let offset = addr.wrapping_sub(lc);
                     encode_st(sr, verify_offset(offset, 9)?)
                 }
 
@@ -354,21 +368,22 @@ impl Assembler {
                         .sym_table
                         .get(&label)
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
-                    let offset = addr - lc;
                     lc += 1;
+                    let offset = addr.wrapping_sub(lc);
                     encode_sti(sr, verify_offset(offset, 9)?)
                 }
 
                 Token::Op(OpCode::Str) => {
                     let sr1 = token_iter.must_next()?.take_reg()?;
                     let sr2 = token_iter.must_next()?.take_reg()?;
-                    let offset = verify_offset(token_iter.must_next()?.take_const()?, 6)?;
                     lc += 1;
+                    let offset = verify_offset(token_iter.must_next()?.take_const()?, 6)?;
                     encode_str(sr1, sr2, offset)
                 }
 
                 Token::Op(OpCode::Trap) => {
                     let trap_vec = token_iter.must_next()?.take_const()?;
+                    lc += 1;
                     match trap_vec {
                         0x20 => encode_getc(),
                         0x21 => encode_out(),
@@ -380,29 +395,44 @@ impl Assembler {
                     }
                 }
 
-                Token::Op(OpCode::GetC) => encode_getc(),
+                Token::Op(OpCode::GetC) => {
+                    lc += 1;
+                    encode_getc()
+                }
 
-                Token::Op(OpCode::Puts) => encode_puts(),
+                Token::Op(OpCode::Puts) => {
+                    lc += 1;
+                    encode_puts()
+                }
 
-                Token::Op(OpCode::PutsP) => encode_putsp(),
+                Token::Op(OpCode::PutsP) => {
+                    lc += 1;
+                    encode_putsp()
+                }
 
-                Token::Op(OpCode::In) => encode_in(),
+                Token::Op(OpCode::In) => {
+                    lc += 1;
+                    encode_in()
+                }
 
-                Token::Op(OpCode::Out) => encode_out(),
+                Token::Op(OpCode::Out) => {
+                    lc += 1;
+                    encode_out()
+                }
 
-                Token::Op(OpCode::Halt) => encode_halt(),
+                Token::Op(OpCode::Halt) => {
+                    lc += 1;
+                    encode_halt()
+                }
 
-                Token::Label(_) => continue,
+                Token::Label(_) | Token::Op(OpCode::Res) => continue,
 
                 // Orphan constants, registers or strings should be syntax error
                 Token::Str(_) | Token::Reg(_) | Token::Const(_) => {
                     return Err(Error::new(ErrorKind::SyntaxError))
                 }
 
-                _ => {
-                    println!("Not yet implemented!");
-                    Vec::new()
-                }
+                Token::Invalid => return Err(Error::new(ErrorKind::InvalidTokenError)),
             };
 
             self.bin.append(&mut bin);
