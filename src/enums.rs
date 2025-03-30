@@ -50,12 +50,12 @@ pub enum OpCode {
     Trap,           // 0b1111 execute trap
 
     /* Traps */
-    GetC,  // 0x20
-    Out,   // 0x21
-    Puts,  // 0x22
-    In,    // 0x23
-    PutsP, // 0x24
-    Halt,  // 0x25
+    GetC = 0x20, // 0x20
+    Out,         // 0x21
+    Puts,        // 0x22
+    In,          // 0x23
+    PutsP,       // 0x24
+    Halt,        // 0x25
 }
 
 #[derive(Clone, Copy, Debug)]

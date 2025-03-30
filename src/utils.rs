@@ -82,12 +82,14 @@ pub fn sign_extend(mut x: u16, bit_count: u16) -> u16 {
 }
 
 /// Validate offset based on bit count
-pub fn verify_offset(mut offset: u16, bit_count: u16) -> Result<()> {
+pub fn verify_offset(mut offset: u16, bit_count: u16) -> Result<u16> {
+    let result = offset;
     offset >>= bit_count;
     let cmp = (!0u16) >> bit_count;
     dbg!(cmp);
     if offset != cmp && offset != 0 {
-        return Err(Error::new(ErrorKind::SyntaxError));
+        return Err(Error::new(ErrorKind::ValueError));
     }
-    Ok(())
+
+    Ok(result & (0xffff >> bit_count))
 }

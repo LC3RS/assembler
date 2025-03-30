@@ -1,5 +1,8 @@
 use crate::encoder::{
-    encode_add, encode_and, encode_br, encode_jmp, encode_jsr, encode_jsrr, encode_ld,
+    encode_add_imm, encode_add_reg, encode_and_imm, encode_and_reg, encode_br, encode_getc,
+    encode_halt, encode_in, encode_jmp, encode_jsr, encode_jsrr, encode_ld, encode_ldi, encode_ldr,
+    encode_lea, encode_not, encode_out, encode_puts, encode_putsp, encode_ret, encode_rti,
+    encode_st, encode_sti, encode_str,
 };
 use crate::enums::OpCode;
 use crate::utils::{sign_extend, verify_offset};
@@ -10,7 +13,7 @@ use crate::{
     utils::tokenize,
 };
 use byteorder::{BigEndian, WriteBytesExt};
-use num_traits::ToPrimitive;
+
 use std::{
     collections::HashMap,
     fs::File,
@@ -221,25 +224,31 @@ impl Assembler {
                 Token::Op(OpCode::Add) => {
                     let dr = token_iter.must_next()?.take_reg()?;
                     let sr1 = token_iter.must_next()?.take_reg()?;
-                    let sr2 = match token_iter.must_next()? {
-                        Token::Reg(r) => r.to_u16().unwrap(),
-                        Token::Const(c) => sign_extend(*c, 5) | 0b100000,
+                    let arg = token_iter.must_next()?;
+                    let bin = match arg {
+                        Token::Reg(_) => encode_add_reg(dr, sr1, arg.take_reg()?),
+                        Token::Const(_) => {
+                            encode_add_imm(dr, sr1, verify_offset(arg.take_const()?, 5)?)
+                        }
                         _ => return Err(Error::new(ErrorKind::SyntaxError)),
                     };
                     lc += 1;
-                    encode_add(dr, sr1, sr2)
+                    bin
                 }
 
                 Token::Op(OpCode::And) => {
                     let dr = token_iter.must_next()?.take_reg()?;
                     let sr1 = token_iter.must_next()?.take_reg()?;
-                    let sr2 = match token_iter.must_next()? {
-                        Token::Reg(r) => r.to_u16().unwrap(),
-                        Token::Const(c) => sign_extend(*c, 5) | 0b100000,
+                    let arg = token_iter.must_next()?;
+                    let bin = match arg {
+                        Token::Reg(_) => encode_and_reg(dr, sr1, arg.take_reg()?),
+                        Token::Const(_) => {
+                            encode_and_imm(dr, sr1, verify_offset(arg.take_const()?, 5)?)
+                        }
                         _ => return Err(Error::new(ErrorKind::SyntaxError)),
                     };
                     lc += 1;
-                    encode_and(dr, sr1, sr2)
+                    bin
                 }
 
                 Token::Op(OpCode::Jmp) => {
@@ -256,8 +265,7 @@ impl Assembler {
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
                     let offset = addr - lc;
                     lc += 1;
-                    verify_offset(offset, 11)?;
-                    encode_jsr(sign_extend(offset, 11))
+                    encode_jsr(verify_offset(offset, 11)?)
                 }
 
                 Token::Op(OpCode::Jsrr) => {
@@ -275,9 +283,114 @@ impl Assembler {
                         .ok_or(Error::new(ErrorKind::MissingLabelError))?;
                     let offset = addr - lc;
                     lc += 1;
-                    verify_offset(offset, 9)?;
-                    encode_ld(dr, sign_extend(offset, 9))
+                    encode_ld(dr, verify_offset(offset, 9)?)
                 }
+
+                Token::Op(OpCode::Ldi) => {
+                    let dr = token_iter.must_next()?.take_reg()?;
+                    let label = token_iter.must_next()?.take_label()?;
+                    let addr = self
+                        .sym_table
+                        .get(&label)
+                        .ok_or(Error::new(ErrorKind::MissingLabelError))?;
+                    let offset = addr - lc;
+                    lc += 1;
+                    encode_ldi(dr, verify_offset(offset, 9)?)
+                }
+
+                Token::Op(OpCode::Ldr) => {
+                    let dr = token_iter.must_next()?.take_reg()?;
+                    let baser = token_iter.must_next()?.take_reg()?;
+                    let offset = verify_offset(token_iter.must_next()?.take_const()?, 6)?;
+                    lc += 1;
+                    encode_ldr(dr, baser, offset)
+                }
+
+                Token::Op(OpCode::Lea) => {
+                    let dr = token_iter.must_next()?.take_reg()?;
+                    let label = token_iter.must_next()?.take_label()?;
+                    let addr = self
+                        .sym_table
+                        .get(&label)
+                        .ok_or(Error::new(ErrorKind::MissingLabelError))?;
+                    let offset = addr - lc;
+                    lc += 1;
+                    encode_lea(dr, verify_offset(offset, 9)?)
+                }
+
+                Token::Op(OpCode::Not) => {
+                    let dr = token_iter.must_next()?.take_reg()?;
+                    let sr = token_iter.must_next()?.take_reg()?;
+                    lc += 1;
+                    encode_not(dr, sr)
+                }
+
+                Token::Op(OpCode::Ret) => {
+                    lc += 1;
+                    encode_ret()
+                }
+
+                Token::Op(OpCode::Rti) => {
+                    lc += 1;
+                    encode_rti()
+                }
+
+                Token::Op(OpCode::St) => {
+                    let sr = token_iter.must_next()?.take_reg()?;
+                    let label = token_iter.must_next()?.take_label()?;
+                    let addr = self
+                        .sym_table
+                        .get(&label)
+                        .ok_or(Error::new(ErrorKind::MissingLabelError))?;
+                    let offset = addr - lc;
+                    lc += 1;
+                    encode_st(sr, verify_offset(offset, 9)?)
+                }
+
+                Token::Op(OpCode::Sti) => {
+                    let sr = token_iter.must_next()?.take_reg()?;
+                    let label = token_iter.must_next()?.take_label()?;
+                    let addr = self
+                        .sym_table
+                        .get(&label)
+                        .ok_or(Error::new(ErrorKind::MissingLabelError))?;
+                    let offset = addr - lc;
+                    lc += 1;
+                    encode_sti(sr, verify_offset(offset, 9)?)
+                }
+
+                Token::Op(OpCode::Str) => {
+                    let sr1 = token_iter.must_next()?.take_reg()?;
+                    let sr2 = token_iter.must_next()?.take_reg()?;
+                    let offset = verify_offset(token_iter.must_next()?.take_const()?, 6)?;
+                    lc += 1;
+                    encode_str(sr1, sr2, offset)
+                }
+
+                Token::Op(OpCode::Trap) => {
+                    let trap_vec = token_iter.must_next()?.take_const()?;
+                    match trap_vec {
+                        0x20 => encode_getc(),
+                        0x21 => encode_out(),
+                        0x22 => encode_puts(),
+                        0x23 => encode_in(),
+                        0x24 => encode_putsp(),
+                        0x25 => encode_halt(),
+                        _ => return Err(Error::new(ErrorKind::SyntaxError)),
+                    }
+                }
+
+                Token::Op(OpCode::GetC) => encode_getc(),
+
+                Token::Op(OpCode::Puts) => encode_puts(),
+
+                Token::Op(OpCode::PutsP) => encode_putsp(),
+
+                Token::Op(OpCode::In) => encode_in(),
+
+                Token::Op(OpCode::Out) => encode_out(),
+
+                Token::Op(OpCode::Halt) => encode_halt(),
 
                 Token::Label(_) => continue,
 
