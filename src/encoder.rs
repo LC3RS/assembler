@@ -141,6 +141,37 @@ pub fn encode_putsp() -> Vec<u16> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_fill() {
+        assert_eq!(encode_fill(0x69), vec![0x69]);
+        assert_eq!(encode_fill(0xDEAD), vec![0xDEAD]);
+    }
+
+    #[test]
+    fn test_blkw() {
+        assert_eq!(encode_blkw(5), vec![0; 5]);
+        assert_eq!(encode_blkw(10), vec![0; 10]);
+    }
+
+    #[test]
+    fn test_stringz() {
+        assert_eq!(
+            encode_stringz(String::from("Jibby World")),
+            vec![74, 105, 98, 98, 121, 32, 87, 111, 114, 108, 100, 0]
+        );
+        assert_eq!(
+            encode_stringz(String::from("Hello Debu")),
+            vec![72, 101, 108, 108, 111, 32, 68, 101, 98, 117, 0]
+        );
+    }
+
+    #[test]
+    fn test_orig() {
+        assert_eq!(encode_orig(0x69), vec![0x69]);
+        assert_eq!(encode_orig(0xDEAD), vec![0xDEAD]);
+    }
+
     #[test]
     fn test_add() {
         assert_eq!(
