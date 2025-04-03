@@ -36,7 +36,10 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v27
       - name: Run Tests with Coverage
+        env:
+          ASSEMBLER_TMP_DIR: ${{ runner.temp }}/test_artifacts
         run: |
+          mkdir $ASSEMBLER_TMP_DIR
           nix develop --command \
           cargo tarpaulin
       - name: Build crate

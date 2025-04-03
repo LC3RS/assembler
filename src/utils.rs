@@ -1,3 +1,5 @@
+use std::{env, path::PathBuf};
+
 use crate::{
     enums::{Parseable, Token},
     error::{Error, ErrorKind, Result},
@@ -74,4 +76,16 @@ pub fn verify_offset(mut offset: u16, bit_count: u16) -> Result<u16> {
     }
 
     Ok(result & (0xffff >> (16 - bit_count)))
+}
+
+///  Resolve directory dirname
+pub fn resolve_dir() -> PathBuf {
+    if cfg!(test) {
+        let tmpdir = env::var("ASSEMBLER_TMP_DIR").unwrap_or(String::from("./tmp"));
+        PathBuf::from(tmpdir)
+    } else if let Ok(dirname) = env::current_dir() {
+        dirname
+    } else {
+        PathBuf::from("")
+    }
 }

@@ -5,7 +5,7 @@ use crate::encoder::{
     encode_st, encode_sti, encode_str,
 };
 use crate::enums::OpCode;
-use crate::utils::verify_offset;
+use crate::utils::{resolve_dir, verify_offset};
 use crate::{
     encoder::{encode_blkw, encode_fill, encode_orig, encode_stringz},
     enums::{Directive, MustNext, Token},
@@ -70,10 +70,7 @@ impl Assembler {
     }
 
     fn emit_sym_table(&self) -> Result<()> {
-        let mut sym_path = PathBuf::new();
-        if let Some(dirname) = self.file_path.parent() {
-            sym_path.push(dirname);
-        }
+        let mut sym_path = resolve_dir();
         sym_path.push(format!("{}.sym", self.outfile));
 
         let mut file = BufWriter::new(File::create(sym_path)?);
@@ -95,10 +92,7 @@ impl Assembler {
     }
 
     fn emit_obj_file(&self) -> Result<()> {
-        let mut bin_path = PathBuf::new();
-        if let Some(dirname) = self.file_path.parent() {
-            bin_path.push(dirname);
-        }
+        let mut bin_path = resolve_dir();
         bin_path.push(format!("{}.obj", self.outfile));
 
         let mut file = BufWriter::new(File::create(bin_path)?);
@@ -457,11 +451,8 @@ mod tests {
 
     #[test]
     fn test_assembler_basic() {
-        let mut test_ass = Assembler::new(
-            PathBuf::from("asm/test.ggnm"),
-            String::from("../tmp/test"),
-            true,
-        );
+        let mut test_ass =
+            Assembler::new(PathBuf::from("asm/test.ggnm"), String::from("test"), true);
 
         let res = test_ass.read_file();
         assert!(res.is_ok());
@@ -474,7 +465,9 @@ mod tests {
         let res = test_ass.emit_sym_table();
         assert!(res.is_ok());
 
-        let f = File::open("tmp/test.sym");
+        let mut sym_path = resolve_dir();
+        sym_path.push("test.sym");
+        let f = File::open(sym_path);
         assert!(f.is_ok());
         let mut f = f.unwrap();
         let mut sym_file_content = String::new();
@@ -504,7 +497,7 @@ mod tests {
     fn test_assembler_instructions() {
         let mut test_ass = Assembler::new(
             PathBuf::from("asm/instructions.ggnm"),
-            String::from("../tmp/instructions"),
+            String::from("instructions"),
             false,
         );
 
@@ -527,7 +520,9 @@ mod tests {
         let res = test_ass.emit_sym_table();
         assert!(res.is_ok());
 
-        let f = File::open("tmp/instructions.sym");
+        let mut sym_path = resolve_dir();
+        sym_path.push("instructions.sym");
+        let f = File::open(sym_path);
         assert!(f.is_ok());
         let mut f = f.unwrap();
         let mut sym_file_content = String::new();
@@ -555,16 +550,15 @@ mod tests {
 
     #[test]
     fn test_assembler_2048() {
-        let mut test_ass = Assembler::new(
-            PathBuf::from("asm/2048.ggnm"),
-            String::from("../tmp/2048"),
-            false,
-        );
+        let mut test_ass =
+            Assembler::new(PathBuf::from("asm/2048.ggnm"), String::from("2048"), false);
 
         let res = test_ass.assemble();
         assert!(res.is_ok());
 
-        let f = File::open("tmp/2048.sym");
+        let mut sym_path = resolve_dir();
+        sym_path.push("2048.sym");
+        let f = File::open(sym_path);
         assert!(f.is_ok());
         let mut f = f.unwrap();
         let mut sym_file_content = String::new();
