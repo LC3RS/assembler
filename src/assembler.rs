@@ -457,8 +457,11 @@ mod tests {
 
     #[test]
     fn test_assembler_basic() {
-        let mut test_ass =
-            Assembler::new(PathBuf::from("asm/test.ggnm"), String::from("test"), false);
+        let mut test_ass = Assembler::new(
+            PathBuf::from("asm/test.ggnm"),
+            String::from("../tmp/test"),
+            true,
+        );
 
         let res = test_ass.read_file();
         assert!(res.is_ok());
@@ -471,7 +474,7 @@ mod tests {
         let res = test_ass.emit_sym_table();
         assert!(res.is_ok());
 
-        let f = File::open("asm/test.sym");
+        let f = File::open("tmp/test.sym");
         assert!(f.is_ok());
         let mut f = f.unwrap();
         let mut sym_file_content = String::new();
@@ -501,7 +504,7 @@ mod tests {
     fn test_assembler_instructions() {
         let mut test_ass = Assembler::new(
             PathBuf::from("asm/instructions.ggnm"),
-            String::from("instructions"),
+            String::from("../tmp/instructions"),
             false,
         );
 
@@ -524,7 +527,7 @@ mod tests {
         let res = test_ass.emit_sym_table();
         assert!(res.is_ok());
 
-        let f = File::open("asm/instructions.sym");
+        let f = File::open("tmp/instructions.sym");
         assert!(f.is_ok());
         let mut f = f.unwrap();
         let mut sym_file_content = String::new();
@@ -552,19 +555,16 @@ mod tests {
 
     #[test]
     fn test_assembler_2048() {
-        let mut test_ass =
-            Assembler::new(PathBuf::from("asm/2048.ggnm"), String::from("2048"), false);
+        let mut test_ass = Assembler::new(
+            PathBuf::from("asm/2048.ggnm"),
+            String::from("../tmp/2048"),
+            false,
+        );
 
-        let res = test_ass.read_file();
+        let res = test_ass.assemble();
         assert!(res.is_ok());
 
-        let res = test_ass.first_pass();
-        assert!(res.is_ok());
-
-        let res = test_ass.emit_sym_table();
-        assert!(res.is_ok());
-
-        let f = File::open("asm/2048.sym");
+        let f = File::open("tmp/2048.sym");
         assert!(f.is_ok());
         let mut f = f.unwrap();
         let mut sym_file_content = String::new();
@@ -577,9 +577,6 @@ mod tests {
         f.read_to_string(&mut expected_sym_content).unwrap();
 
         assert_eq!(&sym_file_content[..], &expected_sym_content[..]);
-
-        let res = test_ass.second_pass();
-        assert!(res.is_ok());
 
         let mut file = BufReader::new(File::open("roms/2048.obj").unwrap());
         let mut expected: Vec<u16> = vec![];

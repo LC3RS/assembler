@@ -1,7 +1,7 @@
 /target
 /result
-/.idea
-
+.idea
+/tmp
 
 # Added by cargo
 #
