@@ -77,8 +77,14 @@ impl Assembler {
         sym_path.push(format!("{}.sym", self.outfile));
 
         let mut file = BufWriter::new(File::create(sym_path)?);
-        for (label, lc) in &self.sym_table {
-            file.write_all(format!("{} {:x}\n", label, lc).as_bytes())?;
+
+        let mut labels: Vec<_> = self.sym_table.keys().map(|l| l.to_owned()).collect();
+        labels.sort_by(|a, b| (self.sym_table.get(a).unwrap()).cmp(self.sym_table.get(b).unwrap()));
+
+        for label in labels {
+            file.write_all(
+                format!("{} {:x}\n", label, self.sym_table.get(&label).unwrap()).as_bytes(),
+            )?;
         }
         file.flush()?;
 
@@ -444,14 +450,58 @@ impl Assembler {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Read;
+
     use super::*;
     use byteorder::ReadBytesExt;
+
+    #[test]
+    fn test_assembler_basic() {
+        let mut test_ass =
+            Assembler::new(PathBuf::from("asm/test.ggnm"), String::from("test"), false);
+
+        let res = test_ass.read_file();
+        assert!(res.is_ok());
+
+        let res = test_ass.first_pass();
+        assert!(res.is_ok());
+
+        assert_eq!(test_ass.sym_table.get("HELLO_WORLD"), Some(&0x3003));
+
+        let res = test_ass.emit_sym_table();
+        assert!(res.is_ok());
+
+        let f = File::open("asm/test.sym");
+        assert!(f.is_ok());
+        let mut f = f.unwrap();
+        let mut sym_file_content = String::new();
+        f.read_to_string(&mut sym_file_content).unwrap();
+
+        let f = File::open("roms/test.sym");
+        assert!(f.is_ok());
+        let mut f = f.unwrap();
+        let mut expected_sym_content = String::new();
+        f.read_to_string(&mut expected_sym_content).unwrap();
+
+        assert_eq!(&sym_file_content[..], &expected_sym_content[..]);
+
+        let res = test_ass.second_pass();
+        assert!(res.is_ok());
+
+        let mut file = BufReader::new(File::open("roms/test.obj").unwrap());
+        let mut expected: Vec<u16> = vec![];
+        while let Ok(word) = file.read_u16::<BigEndian>() {
+            expected.push(word);
+        }
+
+        assert_eq!(&test_ass.bin[..], &expected[..]);
+    }
 
     #[test]
     fn test_assembler_instructions() {
         let mut test_ass = Assembler::new(
             PathBuf::from("asm/instructions.ggnm"),
-            "out".to_owned(),
+            String::from("instructions"),
             false,
         );
 
@@ -471,10 +521,67 @@ mod tests {
         assert_eq!(test_ass.sym_table.get("LABEL7"), Some(&0x3031));
         assert_eq!(test_ass.sym_table.get("LABEL1"), Some(&0x302b));
 
+        let res = test_ass.emit_sym_table();
+        assert!(res.is_ok());
+
+        let f = File::open("asm/instructions.sym");
+        assert!(f.is_ok());
+        let mut f = f.unwrap();
+        let mut sym_file_content = String::new();
+        f.read_to_string(&mut sym_file_content).unwrap();
+
+        let f = File::open("roms/instructions.sym");
+        assert!(f.is_ok());
+        let mut f = f.unwrap();
+        let mut expected_sym_content = String::new();
+        f.read_to_string(&mut expected_sym_content).unwrap();
+
+        assert_eq!(&sym_file_content[..], &expected_sym_content[..]);
+
         let res = test_ass.second_pass();
         assert!(res.is_ok());
 
         let mut file = BufReader::new(File::open("roms/instructions.obj").unwrap());
+        let mut expected: Vec<u16> = vec![];
+        while let Ok(word) = file.read_u16::<BigEndian>() {
+            expected.push(word);
+        }
+
+        assert_eq!(&test_ass.bin[..], &expected[..]);
+    }
+
+    #[test]
+    fn test_assembler_2048() {
+        let mut test_ass =
+            Assembler::new(PathBuf::from("asm/2048.ggnm"), String::from("2048"), false);
+
+        let res = test_ass.read_file();
+        assert!(res.is_ok());
+
+        let res = test_ass.first_pass();
+        assert!(res.is_ok());
+
+        let res = test_ass.emit_sym_table();
+        assert!(res.is_ok());
+
+        let f = File::open("asm/2048.sym");
+        assert!(f.is_ok());
+        let mut f = f.unwrap();
+        let mut sym_file_content = String::new();
+        f.read_to_string(&mut sym_file_content).unwrap();
+
+        let f = File::open("roms/2048.sym");
+        assert!(f.is_ok());
+        let mut f = f.unwrap();
+        let mut expected_sym_content = String::new();
+        f.read_to_string(&mut expected_sym_content).unwrap();
+
+        assert_eq!(&sym_file_content[..], &expected_sym_content[..]);
+
+        let res = test_ass.second_pass();
+        assert!(res.is_ok());
+
+        let mut file = BufReader::new(File::open("roms/2048.obj").unwrap());
         let mut expected: Vec<u16> = vec![];
         while let Ok(word) = file.read_u16::<BigEndian>() {
             expected.push(word);
