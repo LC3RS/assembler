@@ -476,11 +476,10 @@ mod tests {
 
         let mut file = BufReader::new(File::open("roms/instructions.obj").unwrap());
         let mut expected: Vec<u16> = vec![];
-
         while let Ok(word) = file.read_u16::<BigEndian>() {
             expected.push(word);
         }
 
-        assert_eq!(test_ass.bin, expected);
+        assert_eq!(&test_ass.bin[..], &expected[..]);
     }
 }
