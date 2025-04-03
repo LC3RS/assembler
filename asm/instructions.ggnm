@@ -6,6 +6,9 @@
           .ORIG   x3000
 
 ; list of simple instructions, none dealt with labels
+                LEA          R0, HELLO_WORLD
+                PUTS
+HELLO_WORLD     .stringz     "Hello Debu"   
 
            ADD    R3,R2,R1           ; ADD instruction
            ADD    R3,R2,#-5          ; ADD instruction

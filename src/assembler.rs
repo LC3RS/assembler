@@ -441,3 +441,46 @@ impl Assembler {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use byteorder::ReadBytesExt;
+
+    #[test]
+    fn test_assembler_instructions() {
+        let mut test_ass = Assembler::new(
+            PathBuf::from("asm/instructions.ggnm"),
+            "out".to_owned(),
+            false,
+        );
+
+        let res = test_ass.read_file();
+        assert!(res.is_ok());
+
+        let res = test_ass.first_pass();
+        assert!(res.is_ok());
+
+        assert_eq!(test_ass.sym_table.get("LABEL0"), Some(&0x302a));
+        assert_eq!(test_ass.sym_table.get("LABEL3"), Some(&0x302d));
+        assert_eq!(test_ass.sym_table.get("HELLO_WORLD"), Some(&0x3002));
+        assert_eq!(test_ass.sym_table.get("LABEL4"), Some(&0x302e));
+        assert_eq!(test_ass.sym_table.get("LABEL6"), Some(&0x3030));
+        assert_eq!(test_ass.sym_table.get("LABEL2"), Some(&0x302c));
+        assert_eq!(test_ass.sym_table.get("LABEL5"), Some(&0x302f));
+        assert_eq!(test_ass.sym_table.get("LABEL7"), Some(&0x3031));
+        assert_eq!(test_ass.sym_table.get("LABEL1"), Some(&0x302b));
+
+        let res = test_ass.second_pass();
+        assert!(res.is_ok());
+
+        let mut file = BufReader::new(File::open("roms/instructions.obj").unwrap());
+        let mut expected: Vec<u16> = vec![];
+
+        while let Ok(word) = file.read_u16::<BigEndian>() {
+            expected.push(word);
+        }
+
+        assert_eq!(test_ass.bin, expected);
+    }
+}
