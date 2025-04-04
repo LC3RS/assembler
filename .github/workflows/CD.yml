@@ -37,3 +37,4 @@ jobs:
         with:
           executable-name: assembler
           target: ${{ matrix.platform.target }}
+          changes-file: ''
