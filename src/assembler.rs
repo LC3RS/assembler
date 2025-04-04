@@ -80,7 +80,12 @@ impl Assembler {
 
         for label in labels {
             file.write_all(
-                format!("{} {:x}\n", label, self.sym_table.get(&label).unwrap()).as_bytes(),
+                format!(
+                    "//\t{}\t\t{:x}\n",
+                    label,
+                    self.sym_table.get(&label).unwrap()
+                )
+                .as_bytes(),
             )?;
         }
         file.flush()?;
