@@ -1,7 +1,7 @@
 [package]
 name = "assembler"
 description = "Assembler for LC-3 Virtual Machine, written in Rust"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]

@@ -1,4 +1,8 @@
-name: "continuous deployment"
+name: "Continuous Deployment"
+
+
+permissions:
+  contents: write
 
 on:
   push:
@@ -6,35 +10,43 @@ on:
       - "v*.*.*"
   workflow_dispatch:
 
+
 jobs:
   release:
-    name: Release - ${{ matrix.platform.release_for }}
+    name: Release - ${{ matrix.platform.os-name }}
     strategy:
       matrix:
         platform:
-          - os_name: Linux-x86_64
-            os: ubuntu-24.04
+          - os-name: Linux-x86_64
+            runs-on: ubuntu-latest
             target: x86_64-unknown-linux-musl
 
-          - os_name: macOS-x86_64
-            os: macOS-latest
+          - os-name: Windows-x86_64
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+
+          - os-name: macOS-x86_64
+            runs-on: macOS-latest
             target: x86_64-apple-darwin
 
-            # more release targets here ...
+          # more targets here ...
 
-    runs-on: ${{ matrix.platform.os }}
+    runs-on: ${{ matrix.platform.runs-on }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - name: Build executable
+        uses: actions/checkout@v4
+      - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
+          command: build
           target: ${{ matrix.platform.target }}
-          args: "--locked --release"
+          args: "--release"
           strip: true
       - name: Publish artifacts and release
         uses: houseabsolute/actions-rust-release@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           executable-name: assembler
           target: ${{ matrix.platform.target }}
-          changes-file: ''
+
