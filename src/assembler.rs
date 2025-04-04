@@ -76,7 +76,12 @@ impl Assembler {
         let mut file = BufWriter::new(File::create(sym_path)?);
 
         let mut labels: Vec<_> = self.sym_table.keys().map(|l| l.to_owned()).collect();
-        labels.sort_by(|a, b| (self.sym_table.get(a).unwrap()).cmp(self.sym_table.get(b).unwrap()));
+        labels.sort_by(|a, b| {
+            self.sym_table
+                .get(a)
+                .unwrap()
+                .cmp(self.sym_table.get(b).unwrap())
+        });
 
         for label in labels {
             file.write_all(
@@ -579,5 +584,19 @@ mod tests {
         }
 
         assert_eq!(&test_ass.bin[..], &expected[..]);
+    }
+
+    #[test]
+    fn fault_testing() {
+        let syntax_tests = 9;
+        for i in 1..=syntax_tests {
+            let mut test_ass = Assembler::new(
+                PathBuf::from(format!("asm/fault_tests/syntax_fault-{i}.ggnm")),
+                format!("syntax_fault-{i}"),
+                false,
+            );
+            let res = test_ass.assemble().map_err(|e| e.kind);
+            assert_eq!(res, Err(ErrorKind::SyntaxError));
+        }
     }
 }

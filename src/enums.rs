@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[repr(usize)]
-#[derive(FromPrimitive, ToPrimitive, Clone, Copy, Debug)]
+#[derive(FromPrimitive, ToPrimitive, Clone, Copy, Debug, PartialEq)]
 pub enum Register {
     R0 = 0x0,
     R1,
@@ -21,7 +21,7 @@ pub enum Register {
 }
 
 #[repr(u16)]
-#[derive(ToPrimitive, Clone, Copy, Debug)]
+#[derive(ToPrimitive, Clone, Copy, Debug, PartialEq)]
 pub enum OpCode {
     Br = 0b0000000, // 0b0000 branch
     Brp,            // 0b0000 branch if n
@@ -58,7 +58,7 @@ pub enum OpCode {
     Halt,        // 0x25
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Directive {
     Orig,
     End,
@@ -67,7 +67,7 @@ pub enum Directive {
     Stringz,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Label(String),
     Op(OpCode),

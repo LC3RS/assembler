@@ -5,7 +5,7 @@ use crate::{
     error::{Error, ErrorKind, Result},
 };
 
-/// Parase a string into a vector of tokens
+/// Parse a string into a vector of tokens
 pub fn tokenize(s: &str) -> Result<Option<Vec<Token>>> {
     let s = s.trim();
 
@@ -87,5 +87,52 @@ pub fn resolve_dir() -> PathBuf {
         dirname
     } else {
         PathBuf::from("")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::enums::{Directive, OpCode, Register};
+
+    #[test]
+    fn test_tokenize() {
+        let check1 = vec![
+            Token::Label(String::from("HELLO_WORLD")),
+            Token::Dir(Directive::Stringz),
+            Token::Str(String::from("Hello, World")),
+        ];
+        assert_eq!(
+            tokenize("HELLO_WORLD .stringz \"Hello, World\""),
+            Ok(Some(check1))
+        );
+        let check2 = vec![
+            Token::Op(OpCode::Add),
+            Token::Reg(Register::R0),
+            Token::Reg(Register::R2),
+            Token::Const(14),
+        ];
+        assert_eq!(tokenize("ADD R0,R2,#14 ;COMMENT"), Ok(Some(check2)));
+        assert_eq!(tokenize(";COMMENT2"), Ok(None));
+    }
+
+    #[test]
+    fn test_parse_constant() {
+        assert_eq!(parse_constant("#412"), Ok(412u16));
+        assert_eq!(parse_constant("xa4"), Ok(0xa4u16));
+        assert_eq!(parse_constant("b110101"), Ok(0b110101u16));
+        assert_eq!(
+            parse_constant("#f").map_err(|e| e.kind),
+            Err(ErrorKind::ParseConstantError)
+        );
+    }
+
+    #[test]
+    fn test_verify_offset() {
+        assert_eq!(verify_offset(0xffd4, 8), Ok(0x00d4));
+        assert_eq!(
+            verify_offset(0x0fff, 8).map_err(|e| e.kind),
+            Err(ErrorKind::ValueError)
+        );
     }
 }

@@ -1,6 +1,6 @@
 use std::{fmt, io, num, result::Result as StdResult};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ErrorKind {
     IOError,
     ParseConstantError,
@@ -11,13 +11,12 @@ pub enum ErrorKind {
     MissingLabelError,
     UnexpectedEof,
     SyntaxError,
-    JibbyError,
     ValueError,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Error {
-    kind: ErrorKind,
+    pub kind: ErrorKind,
     message: String,
 }
 
@@ -42,7 +41,6 @@ impl ErrorKind {
             ErrorKind::UnexpectedEof => "unexpectedly reached EOF",
             ErrorKind::SyntaxError => "invalid syntax",
             ErrorKind::MissingLabelError => "missing label",
-            ErrorKind::JibbyError => "invalid value",
             ErrorKind::ValueError => "invalid value",
         }
     }

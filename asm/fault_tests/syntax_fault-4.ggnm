@@ -1,0 +1,6 @@
+.ORIG x3000
+LEA R0, HELLO_WORLD
+BRNZ 
+PUTS
+HELLO_WORLD .stringz "Hello, World"
+.END
